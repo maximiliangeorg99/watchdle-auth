@@ -18,43 +18,53 @@
     }
     .container { padding: 2rem; max-width: 400px; }
     h1 { font-size: 1.25rem; margin-bottom: 0.5rem; }
-    p { color: #969696; font-size: 0.875rem; }
-    a { color: #336ECC; text-decoration: none; }
+    p { color: #969696; font-size: 0.875rem; margin-bottom: 1.5rem; }
     .btn {
       display: inline-block;
-      margin-top: 1rem;
-      padding: 0.75rem 1.5rem;
+      padding: 0.875rem 2rem;
       background: #336ECC;
       color: #fff;
-      border-radius: 8px;
+      border-radius: 10px;
       font-weight: 600;
+      font-size: 1rem;
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
     }
+    .btn:active { opacity: 0.85; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Redirecting to Watchdle...</h1>
-    <p>If the app doesn't open automatically:</p>
-    <a id="manual-link" class="btn" href="#">Open Watchdle</a>
+    <!-- iOS: auto-redirects, this is only shown briefly -->
+    <div id="ios-view">
+      <h1>Redirecting to Watchdle...</h1>
+    </div>
+    <!-- Android: show a button (Chrome Custom Tabs need a user gesture for intent://) -->
+    <div id="android-view" class="hidden">
+      <h1>Authentication complete!</h1>
+      <p>Tap the button below to return to the app.</p>
+      <a id="open-btn" class="btn" href="#">Open Watchdle</a>
+    </div>
   </div>
   <script>
     var qs = window.location.search;
     var customScheme = 'watchdle://auth/callback' + qs;
     var isAndroid = /android/i.test(navigator.userAgent);
 
-    // Android: intent:// with package name so Chrome can reliably resolve the app.
-    // S.browser_fallback_url prevents Chrome from going to the Play Store if app isn't found.
-    var intentUri = 'intent://auth/callback' + qs +
-      '#Intent;scheme=watchdle;package=com.watchdle.app;' +
-      'S.browser_fallback_url=' + encodeURIComponent(window.location.href) + ';end';
+    if (isAndroid) {
+      // Android: intent:// with package for reliable resolution via user tap
+      var intentUri = 'intent://auth/callback' + qs +
+        '#Intent;scheme=watchdle;package=com.watchdle.app;' +
+        'S.browser_fallback_url=' + encodeURIComponent(window.location.href) + ';end';
 
-    var link = isAndroid ? intentUri : customScheme;
-    document.getElementById('manual-link').href = link;
-
-    // Small delay lets Chrome Custom Tab settle before attempting the redirect
-    setTimeout(function() {
-      window.location.replace(link);
-    }, 100);
+      document.getElementById('ios-view').classList.add('hidden');
+      document.getElementById('android-view').classList.remove('hidden');
+      document.getElementById('open-btn').href = intentUri;
+    } else {
+      // iOS: ASWebAuthenticationSession intercepts the custom scheme redirect immediately
+      window.location.replace(customScheme);
+    }
   </script>
 </body>
 </html>
