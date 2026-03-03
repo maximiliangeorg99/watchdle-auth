@@ -52,15 +52,22 @@
     var customScheme = 'watchdle://auth/callback' + qs;
     var isAndroid = /android/i.test(navigator.userAgent);
 
-    if (isAndroid) {
-      // Android: intent:// with package for reliable resolution via user tap
-      var intentUri = 'intent://auth/callback' + qs +
-        '#Intent;scheme=watchdle;package=com.watchdle.app;' +
-        'S.browser_fallback_url=' + encodeURIComponent(window.location.href) + ';end';
+    // Build intent:// fallback for Android
+    var intentUri = 'intent://auth/callback' + qs +
+      '#Intent;scheme=watchdle;package=com.watchdle.app;' +
+      'S.browser_fallback_url=' + encodeURIComponent(window.location.href) + ';end';
 
-      document.getElementById('ios-view').classList.add('hidden');
-      document.getElementById('android-view').classList.remove('hidden');
+    if (isAndroid) {
+      // Android: auto-redirect via custom scheme first.
+      // If the Chrome Custom Tab intercepts it, openAuthSessionAsync resolves.
+      // Show the button as fallback after a short delay in case auto-redirect fails.
       document.getElementById('open-btn').href = intentUri;
+      window.location.replace(customScheme);
+
+      setTimeout(function () {
+        document.getElementById('ios-view').classList.add('hidden');
+        document.getElementById('android-view').classList.remove('hidden');
+      }, 1000);
     } else {
       // iOS: ASWebAuthenticationSession intercepts the custom scheme redirect immediately
       window.location.replace(customScheme);
