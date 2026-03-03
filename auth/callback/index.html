@@ -42,18 +42,19 @@
     var customScheme = 'watchdle://auth/callback' + qs;
     var isAndroid = /android/i.test(navigator.userAgent);
 
-    // Android: use intent:// URI which Chrome handles reliably for app deep links
-    var intentUri = 'intent://auth/callback' + qs + '#Intent;scheme=watchdle;end';
-    var link = isAndroid ? intentUri : customScheme;
+    // Android: intent:// with package name so Chrome can reliably resolve the app.
+    // S.browser_fallback_url prevents Chrome from going to the Play Store if app isn't found.
+    var intentUri = 'intent://auth/callback' + qs +
+      '#Intent;scheme=watchdle;package=com.watchdle.app;' +
+      'S.browser_fallback_url=' + encodeURIComponent(window.location.href) + ';end';
 
+    var link = isAndroid ? intentUri : customScheme;
     document.getElementById('manual-link').href = link;
 
-    // Try automatic redirect
-    if (isAndroid) {
-      window.location.replace(intentUri);
-    } else {
-      window.location.replace(customScheme);
-    }
+    // Small delay lets Chrome Custom Tab settle before attempting the redirect
+    setTimeout(function() {
+      window.location.replace(link);
+    }, 100);
   </script>
 </body>
 </html>
