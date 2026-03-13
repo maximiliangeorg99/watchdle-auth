@@ -51,21 +51,39 @@
     var qs = window.location.search;
     var customScheme = 'watchdle://auth/callback' + qs;
     var isAndroid = /android/i.test(navigator.userAgent);
+    var isMobile = isAndroid || /iphone|ipad|ipod/i.test(navigator.userAgent);
 
     // Build intent:// fallback for Android
     var intentUri = 'intent://auth/callback' + qs +
       '#Intent;scheme=watchdle;package=com.watchdle.app;' +
       'S.browser_fallback_url=' + encodeURIComponent(window.location.href) + ';end';
 
-    if (window.opener) {
-      // Desktop/web: send the auth code back to the opener window via postMessage
-      window.opener.postMessage({ type: 'watchdle-auth-callback', url: window.location.href }, '*');
-      document.getElementById('ios-view').innerHTML = '<h1>Authentication complete!</h1><p>You can close this window.</p>';
-      setTimeout(function () { window.close(); }, 1000);
+    if (!isMobile) {
+      // Desktop/web: send the auth code back via BroadcastChannel + postMessage fallback
+      var sent = false;
+
+      // BroadcastChannel is reliable even when window.opener is nulled by cross-origin redirects
+      try {
+        var bc = new BroadcastChannel('watchdle-auth');
+        bc.postMessage({ type: 'watchdle-auth-callback', url: window.location.href });
+        bc.close();
+        sent = true;
+      } catch (e) {}
+
+      // Also try postMessage as fallback
+      if (window.opener) {
+        try {
+          window.opener.postMessage({ type: 'watchdle-auth-callback', url: window.location.href }, '*');
+          sent = true;
+        } catch (e) {}
+      }
+
+      document.getElementById('ios-view').innerHTML = sent
+        ? '<h1>Authentication complete!</h1><p>You can close this window.</p>'
+        : '<h1>Authentication complete!</h1><p>Please close this window and return to the app.</p>';
+      if (sent) setTimeout(function () { window.close(); }, 1000);
     } else if (isAndroid) {
       // Android: auto-redirect via custom scheme first.
-      // If the Chrome Custom Tab intercepts it, openAuthSessionAsync resolves.
-      // Show the button as fallback after a short delay in case auto-redirect fails.
       document.getElementById('open-btn').href = intentUri;
       window.location.replace(customScheme);
 
