@@ -57,7 +57,12 @@
       '#Intent;scheme=watchdle;package=com.watchdle.app;' +
       'S.browser_fallback_url=' + encodeURIComponent(window.location.href) + ';end';
 
-    if (isAndroid) {
+    if (window.opener) {
+      // Desktop/web: send the auth code back to the opener window via postMessage
+      window.opener.postMessage({ type: 'watchdle-auth-callback', url: window.location.href }, '*');
+      document.getElementById('ios-view').innerHTML = '<h1>Authentication complete!</h1><p>You can close this window.</p>';
+      setTimeout(function () { window.close(); }, 1000);
+    } else if (isAndroid) {
       // Android: auto-redirect via custom scheme first.
       // If the Chrome Custom Tab intercepts it, openAuthSessionAsync resolves.
       // Show the button as fallback after a short delay in case auto-redirect fails.
